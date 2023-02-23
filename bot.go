@@ -1,7 +1,8 @@
 package bot
 
 import (
-    "lagoon/models"
+    "github.com/kissejau/lagoon/models"
+
     "net/http"
     "strconv"
     "io"
