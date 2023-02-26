@@ -17,5 +17,10 @@ type Chat struct {
 }
 
 type Response struct {
-    Result []Update       `json"result"`
+    Result []Update     `json"result"`
+}
+
+type BotMessage struct {
+    ChatId int          `json:"chat_id"`
+    Text string         `json:"text"`
 }
