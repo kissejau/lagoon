@@ -3,7 +3,6 @@ package bot
 import (
 	"github.com/kissejau/lagoon/models"
 
-    "bytes"
 	"encoding/json"
 	"io"
 	"log"
@@ -11,7 +10,7 @@ import (
 	"strconv"
 )
 
-type Handler func(model models.Message) (models.BotMessage, bool)
+type Handler func(bot Bot, message models.Message)
 
 type Bot struct {
 	url      string
@@ -19,13 +18,16 @@ type Bot struct {
 	handlers []Handler
 }
 
-func New(token string, handlers []Handler) (*Bot, error) {
+func New(token string) (*Bot, error) {
 	b := &Bot{
-		url:      "https://api.telegram.org/bot",
-		token:    token,
-		handlers: handlers,
+		url:   "https://api.telegram.org/bot",
+		token: token,
 	}
 	return b, nil
+}
+
+func (bot *Bot) RegistrateHandler(handler Handler) {
+	bot.handlers = append(bot.handlers, handler)
 }
 
 func (bot Bot) Run() {
@@ -37,32 +39,25 @@ func (bot Bot) Run() {
 		}
 		log.Println(updates)
 
-		for _, update := range updates {	
+		for _, update := range updates {
 			err := bot.respond(update)
-            offset = update.UpdateId + 1
-            if err != nil {
-                panic(err)
-            }
+			offset = update.UpdateId + 1
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 }
 
 func (bot Bot) respond(update models.Update) error {
-	for _, handler := range bot.handlers {
-		if botMsg, fl := handler(update.Message); fl {
-            // LOG
-            log.Println(botMsg)
-            data, err := json.Marshal(botMsg)
-            if err != nil {
-                return err
-            }
-			_, err = http.Post(bot.url+bot.token+"/sendMessage", "application/json", bytes.NewReader(data))
-            if err != nil {
-                return err
-            }
-        }
+	if update.Message.Text[0] == '/' {
+		log.Printf("command is execed")
+	} else {
+		for _, handler := range bot.handlers {
+			handler(bot, update.Message)
+		}
 	}
-    return nil
+	return nil
 }
 
 func (bot Bot) getUpdates(offset int) ([]models.Update, error) {
@@ -82,8 +77,3 @@ func (bot Bot) getUpdates(offset int) ([]models.Update, error) {
 	return response.Result, nil
 }
 
-func (bot Bot) GetMe() string {
-	res, _ := http.Get(bot.url + bot.token + "/getMe")
-	data, _ := io.ReadAll(res.Body)
-	return string(data)
-}
